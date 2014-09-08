@@ -4,6 +4,7 @@
 # from BeautifulSoup import SoupStrainer, BeautifulSoup as BS
 import re
 import urllib2
+import sqlite3
 import sys
 from urllib2 import URLError
 
@@ -74,4 +75,23 @@ def getM3U8(m3u8URL):
         return html
     except:
         return None
+    
+def insertStation(stationName, stationState=None, stationCity=None):
+    ''' taking care of this as to create a pattern of best practices '''
+    if cursor:
+        try:
+            cursor.execute("insert into stations values (?, ?, ?)", (stationName, stationState, stationCity))
+            return True
+        except:
+            return False
+    else:
+        return False
+    
+def insertFeed(feedName, feedId, stationId, feedUrl, **kargs):
+    ''' kargs options are, 'resolution', 'bandwidth', 'codecs', 'requiresProxy' '''
+    pass
+
+def getStationId(stationName):
+    ''' Returns the primary key for a given station name. '''
+    pass
     
