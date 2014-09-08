@@ -5,8 +5,6 @@
 import re
 import urllib2
 import sqlite3
-import sys
-from urllib2 import URLError
 
 # URL from which the video streams will be pulled
 STREAMS_URL = 'http://cdn.tribtv.com/ake/embed.html?station=wreg&feed=1&auto=true'
@@ -61,10 +59,13 @@ REGEX_INF_CODECS = re.compile('[^="]+(?=\")')
 # Suchthat- {'stationName', 'feedId', 'feedName', 'm3u8URL'}
 stations = []
 
-# streamsReq = urllib2.Request(STREAMS_URL, {}, {'User-Agent': USER_AGENT} )
-# try: urllib2.urlopen(streamsReq)
-# except URLError as e:
-#     print e.reason 
+
+def connectDB(dbFilename):
+    try:
+        conn = sqlite3.connect(dbFilename)  # @UndefinedVariable
+        return conn.cursor()
+    except:
+        return None
 
 def getM3U8(m3u8URL):
     m3u8Req = urllib2.Request(m3u8URL, None, {'User-Agent': USER_AGENT})
@@ -76,11 +77,11 @@ def getM3U8(m3u8URL):
     except:
         return None
     
-def insertStation(stationName, stationState=None, stationCity=None):
-    ''' taking care of this as to create a pattern of best practices '''
-    if cursor:
+def insertStation(stationName, stationState='', stationCity=''):
+    ''' taking care of this as to insure a pattern of best practices '''
+    if db:
         try:
-            cursor.execute("insert into stations values (?, ?, ?)", (stationName, stationState, stationCity))
+            db.execute("insert into stations values (?, ?, ?)", (stationName, stationState, stationCity))
             return True
         except:
             return False
@@ -93,5 +94,11 @@ def insertFeed(feedName, feedId, stationId, feedUrl, **kargs):
 
 def getStationId(stationName):
     ''' Returns the primary key for a given station name. '''
-    pass
+    if db:
+        return db.execute('SELECT STATION_ID FROM stations WHERE STATION_NAME=?', stationName)
+    else:
+        return None
+
+
+db = connectDB('feeds.sqlite')
     
