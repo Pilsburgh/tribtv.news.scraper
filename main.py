@@ -1,8 +1,11 @@
-'''© 2014 Michael Archibald'''
+#! /usr/bin/python
+#Copyright 2014 Michael Archibald
 
-from BeautifulSoup import SoupStrainer, BeautifulSoup as BS
+# from BeautifulSoup import SoupStrainer, BeautifulSoup as BS
 import re
-
+import urllib2
+import sys
+from urllib2 import URLError
 
 # URL from which the video streams will be pulled
 STREAMS_URL = 'http://cdn.tribtv.com/ake/embed.html?station=wreg&feed=1&auto=true'
@@ -24,16 +27,20 @@ REGEX_M3U8_URI = re.compile('http:\/\/.+m3u8')
 # Result: 'wgn'
 REGEX_STATION_ID = re.compile('\w+(?=\[\d\])')
 
-# Matches feedId - UNTESTED
+# Matches feedName
 # Result: 'WGNTribune3_1'
-REGEX_FEED_ID = re.compile('(?<=.+\/).+(?=\@\d+\/)')
+REGEX_FEED_NAME = re.compile('[^\/][\w\d_]+(?=\@\d+\/)')
 
-# Matches feedId - but without using 'positive lookbehind'
-# Will need to use 'str.split('\/')[len(str) - 1]' to pull the feedId
-# Result: 'wgn[5] = "http://wgntribune-lh.akamaihd.net/z/WGNTribune3_1'
-REGEX_FEED_ID_ALT = re.compile('.+(?=\@\d+\/)')
+# Matches feedId
+# Result: '192102'
+REGEX_FEED_ID = re.compile('\d+(?=\/.*m3u8)')
 
 # List of stations. Each station is a list consisting of one or more feeds that correspond
 # to that particular station.
 # Suchthat- {'stationId': 'station_code', 'feeds':[{'feedId': '', 'manifestURI': 'manifest.m3u8_URI'}]}
 stations = []
+
+# streamsReq = urllib2.Request(STREAMS_URL, {}, {'User-Agent': USER_AGENT} )
+# try: urllib2.urlopen(streamsReq)
+# except URLError as e:
+#     print e.reason 
