@@ -106,7 +106,7 @@ def getFeedM3U8(m3u8URL):
 def insertStations(stations):
     for station in stations:
         success = insertStation(station['stationName'])
-        print station['stationName'] + ' successful? ' + str(success)
+#         print station['stationName'] + ' successful? ' + str(success)
     
 def insertStation(stationName, stationState='', stationCity=''):
     ''' taking care of this as to insure a pattern of best practices '''
@@ -122,9 +122,22 @@ def insertStation(stationName, stationState='', stationCity=''):
     else:
         return False
     
-def insertFeed(feedName, feedId, stationId, feedUrl, **kargs):
+def insertFeed(feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs = '', requiresProxy=False):
     ''' kargs options are, 'resolution', 'bandwidth', 'codecs', 'requiresProxy' '''
-    pass
+    if db:
+        try:
+            db.execute("insert into feeds (FEED_ID, Station_ID, FEED_NAME, FEED_URL, FEED_RESOLUTION\
+            , FEED_BANDWIDTH, FEED_CODECS, FEED_REQUIRES_PROXY) values (?, ?, ?, ?, ?, ?, ?\
+            , ?)", (feedId, stationId, feedName, feedUrl, int(bandwidth), codecs, int(requiresProxy)))
+            
+            db.commit()
+            return True
+        except Exception,e:
+            db.rollback()
+            print str(e)
+            return False
+    else:
+        return False
 
 def getStationId(stationName):
     ''' Returns the primary key for a given station name. '''
