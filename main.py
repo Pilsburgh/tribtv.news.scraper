@@ -59,6 +59,17 @@ REGEX_INF_CODECS = re.compile('[^="]+(?=\")')
 # Suchthat- {'stationName', 'feedId', 'feedName', 'm3u8URL'}
 stations = []
 
+# streamsReq = urllib2.Request(STREAMS_URL, {}, {'User-Agent': USER_AGENT} )
+# try: urllib2.urlopen(streamsReq)
+# except URLError as e:
+#     print e.reason 
+
+def getM3U8Lines(streamsURL):
+    try: req = urllib2.urlopen(streamsURL)
+    except: return None
+    
+    html = req.read();
+    return REGEX_M3U8_LINE.findall(html)
 
 def connectDB(dbFilename):
     try:
