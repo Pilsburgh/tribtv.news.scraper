@@ -16,7 +16,7 @@ KHTML, like Gecko) Version/4.0 Chrome/30.0.0.0 Mobile Safari/537.36'
     
 # Matches lines that contain master.m3u8 URIs, station ids, and feed ids.
 # Result: 'wgn[5] = "http://wgntribune-lh.akamaihd.net/z/WGNTribune3_1@192102/master.m3u8";'
-REGEX_M3U8_LINE = re.compile('\w*\[\d\].*master.m3u8";')
+REGEX_STATION_LINE = re.compile('\w*\[\d\].*master.m3u8";')
 
 # Matches the URI for the m3u8
 # Result: 'http://wgntribune-lh.akamaihd.net/z/WGNTribune3_1@192102/master.m3u8'
@@ -57,28 +57,43 @@ REGEX_INF_CODECS = re.compile('[^="]+(?=\")')
 # List of stations. Each station is a list consisting of one or more feeds that correspond
 # to that particular station.
 # Suchthat- {'stationName', 'feedId', 'feedName', 'm3u8URL'}
-stations = []
+# stations = []
 
 # streamsReq = urllib2.Request(STREAMS_URL, {}, {'User-Agent': USER_AGENT} )
 # try: urllib2.urlopen(streamsReq)
 # except URLError as e:
 #     print e.reason 
 
-def getM3U8Lines(streamsURL):
+def getStationLines(streamsURL):
+    ''' Finds lines containing all information needed for any given channel from the URL. '''
     try: req = urllib2.urlopen(streamsURL)
     except: return None
     
     html = req.read();
-    return REGEX_M3U8_LINE.findall(html)
+    return REGEX_STATION_LINE.findall(html)
+
+def parseStationLines(m3u8Lines):
+    ''' Takes lines pulled using getStationLines() and seperates relevant data '''
+    stations = []
+    for line in m3u8Lines:
+        station = {}
+        station['stationName'] = REGEX_STATION_Name.search(line).group().upper()
+        station['feedId'] = REGEX_FEED_ID.search(line).group()
+        station['feedName'] = REGEX_FEED_NAME.search(line).group()
+        station['m3u8URL'] = REGEX_M3U8_URL.search(line).group()
+        stations.append(station)
+    
+    return stations
 
 def connectDB(dbFilename):
     try:
         conn = sqlite3.connect(dbFilename)  # @UndefinedVariable
-        return conn.cursor()
+        conn.row_factory = sqlite3.Row  # @UndefinedVariable
+        return conn
     except:
         return None
 
-def getM3U8(m3u8URL):
+def getFeedM3U8(m3u8URL):
     m3u8Req = urllib2.Request(m3u8URL, None, {'User-Agent': USER_AGENT})
     try:
         response = urllib2.urlopen(m3u8Req)
@@ -88,13 +103,21 @@ def getM3U8(m3u8URL):
     except:
         return None
     
+def insertStations(stations):
+    for station in stations:
+        success = insertStation(station['stationName'])
+        print station['stationName'] + ' successful? ' + str(success)
+    
 def insertStation(stationName, stationState='', stationCity=''):
     ''' taking care of this as to insure a pattern of best practices '''
     if db:
         try:
-            db.execute("insert into stations values (?, ?, ?)", (stationName, stationState, stationCity))
+            db.execute("insert into stations (STATION_NAME, STATION_STATE, STATION_CITY) values (?, ?, ?)", (stationName, stationState, stationCity))
+            db.commit()
             return True
-        except:
+        except Exception,e:
+            db.rollback()
+            print str(e)
             return False
     else:
         return False
@@ -106,10 +129,14 @@ def insertFeed(feedName, feedId, stationId, feedUrl, **kargs):
 def getStationId(stationName):
     ''' Returns the primary key for a given station name. '''
     if db:
-        return db.execute('SELECT STATION_ID FROM stations WHERE STATION_NAME=?', stationName)
+        return db.execute('SELECT STATION_ID FROM stations WHERE STATION_NAME=?', [stationName]).fetchone()[0]
     else:
         return None
 
 
 db = connectDB('feeds.sqlite')
-    
+stationLines = getStationLines(STREAMS_URL)
+stations = parseStationLines(stationLines)
+insertStations(stations)
+print getStationId(stations[3]['stationName'])
+db.close()
