@@ -1,4 +1,4 @@
-akamia.news.scraper
+tribtv.news.scraper
 ===================
 
 Scrapes local news streams hosted on Akamia servers and stores them in an SQLite database.
