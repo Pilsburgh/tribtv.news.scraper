@@ -19,7 +19,8 @@ CREATE TABLE "feeds" (
     "FEED_CODECS" TEXT,
     /*Video feed protection schemes may require the stream to be processed through
      an external daemon before playback is possible.*/
-    "FEED_REQUIRES_PROXY" INTEGER DEFAULT ('0')
+    "FEED_REQUIRES_PROXY" INTEGER DEFAULT ('0'),
+    "EXTRA_INFO" TEXT
 );
 CREATE UNIQUE INDEX "FEED_PK" on feeds (FEED_PK ASC);
 CREATE INDEX "FEED_ID" on feeds (FEED_ID ASC);

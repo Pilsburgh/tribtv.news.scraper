@@ -145,11 +145,11 @@ def deleteUnusedStations(db):
     for stationId in unusedStationIds:
         deleteStation(db, stationId)
     
-def updateFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs='', requiresProxy=False):
+def updateFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs='', requiresProxy=False, extraInfo=''):
         try:
             db.execute("UPDATE feeds SET FEED_ID=?, Station_ID=?, FEED_NAME=?, FEED_RESOLUTION=?\
-            , FEED_BANDWIDTH=?, FEED_CODECS=?, FEED_REQUIRES_PROXY=? WHERE FEED_URL=?",
-            (feedId, stationId, feedName, resolution, int(bandwidth), codecs, int(requiresProxy), feedUrl))
+            , FEED_BANDWIDTH=?, FEED_CODECS=?, FEED_REQUIRES_PROXY=?, EXTRA_INFO=? WHERE FEED_URL=?",
+            (feedId, stationId, feedName, resolution, int(bandwidth), codecs, int(requiresProxy), extraInfo, feedUrl))
             db.commit()
             if VERBOSE: print "Updated feed where feedUrl=%s" % (feedUrl)
         except Exception,e:
@@ -158,20 +158,20 @@ def updateFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidt
             if VERBOSE: print "Failed to update feed where feedUrl=%s" % (feedUrl)
 
 
-def insertFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs = '', requiresProxy=False):
+def insertFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs = '', requiresProxy=False, extraInfo=''):
     ''' kargs options are, 'resolution', 'bandwidth', 'codecs', 'requiresProxy' '''
     if db:
         try:
             db.execute("insert into feeds (FEED_ID, Station_ID, FEED_NAME, FEED_URL, FEED_RESOLUTION\
-            , FEED_BANDWIDTH, FEED_CODECS, FEED_REQUIRES_PROXY) values (?, ?, ?, ?, ?, ?, ?\
-            , ?)", (feedId, stationId, feedName, feedUrl, resolution, int(bandwidth), codecs, int(requiresProxy)))
+            , FEED_BANDWIDTH, FEED_CODECS, FEED_REQUIRES_PROXY, EXTRA_INFO) values (?, ?, ?, ?, ?, ?, ?\
+            , ?, ?)", (feedId, stationId, feedName, feedUrl, resolution, int(bandwidth), codecs, int(requiresProxy), extraInfo))
             
             db.commit()
             return True
         except Exception,e:
             db.rollback()
             print str(e)  
-            print "\n\nAttempting to update feed on failed insertion."
+            print "Attempting to update feed on failed insertion."
             updateFeed(db, feedId, stationId, feedName, feedUrl, resolution, bandwidth, codecs, requiresProxy)
             return False
     else:
