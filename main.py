@@ -62,6 +62,9 @@ REGEX_INF_CODECS = re.compile('[^="]+(?=\")')
 # Suchthat- {'stationName', 'feedId', 'feedName', 'm3u8URL'}
 stations = []
 
+#Reference to the sqlite database.
+db = None
+
 def getStationLines(streamsURL):
     ''' Finds lines containing all information needed for any given channel from the URL. '''
     try: req = urllib2.urlopen(streamsURL)
@@ -102,12 +105,12 @@ def getFeedM3U8(m3u8URL):
         print(e)
         return None
     
-def insertStations(db, stations):
+def insertStations(stations):
     for station in stations:
-        success = insertStation(db, station['stationName'])  # @UnusedVariable
+        success = insertStation(station['stationName'])  # @UnusedVariable
 #         print station['stationName'] + ' successful? ' + str(success)
     
-def insertStation(db, stationName, stationState='', stationCity=''):
+def insertStation(stationName, stationState='', stationCity=''):
     ''' taking care of this as to insure a pattern of best practices '''
     if db:
         try:
@@ -121,7 +124,7 @@ def insertStation(db, stationName, stationState='', stationCity=''):
     else:
         return False
 
-def deleteStation(db, stationId):
+def deleteStation(stationId):
     try:
         db.execute("DELETE FROM stations WHERE STATION_ID=?", (stationId,))
         db.commit()
@@ -131,7 +134,7 @@ def deleteStation(db, stationId):
         print str(e)
         if VERBOSE: print "Failed to delete station %s from DB." % (stationId)
         
-def deleteUnusedStations(db):
+def deleteUnusedStations():
     '''Deletes stations that don't have a corrosponding feed.'''
     usedStationIds = db.execute('SELECT STATION_ID FROM feeds').fetchall()
     #collapses list of tuples into a list of ints
@@ -143,9 +146,9 @@ def deleteUnusedStations(db):
     
     unusedStationIds = list(set(allStationIds) - set(usedStationIds))
     for stationId in unusedStationIds:
-        deleteStation(db, stationId)
+        deleteStation(stationId)
     
-def updateFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs='', requiresProxy=False, extraInfo=''):
+def updateFeed(feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs='', requiresProxy=False, extraInfo=''):
         try:
             db.execute("UPDATE feeds SET FEED_ID=?, Station_ID=?, FEED_NAME=?, FEED_RESOLUTION=?\
             , FEED_BANDWIDTH=?, FEED_CODECS=?, FEED_REQUIRES_PROXY=?, EXTRA_INFO=? WHERE FEED_URL=?",
@@ -158,7 +161,7 @@ def updateFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidt
             if VERBOSE: print "Failed to update feed where feedUrl=%s" % (feedUrl)
 
 
-def insertFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs = '', requiresProxy=False, extraInfo=''):
+def insertFeed(feedId, stationId, feedName, feedUrl, resolution='', bandwidth='', codecs = '', requiresProxy=False, extraInfo=''):
     ''' kargs options are, 'resolution', 'bandwidth', 'codecs', 'requiresProxy' '''
     if db:
         try:
@@ -172,23 +175,23 @@ def insertFeed(db, feedId, stationId, feedName, feedUrl, resolution='', bandwidt
             db.rollback()
             print str(e)  
             print "Attempting to update feed on failed insertion."
-            updateFeed(db, feedId, stationId, feedName, feedUrl, resolution, bandwidth, codecs, requiresProxy)
+            updateFeed(feedId, stationId, feedName, feedUrl, resolution, bandwidth, codecs, requiresProxy)
             return False
     else:
         return False
     
-def insertFeeds(db, feeds):
+def insertFeeds(feeds):
     for feed in feeds:
-        success = insertFeed(db, feed['feedId'], feed['stationId'], feed['feedName'], feed['feedUrl'], feed['resolution'], feed['bandwidth'], feed['codecs'])  # @UnusedVariable
+        success = insertFeed(feed['feedId'], feed['stationId'], feed['feedName'], feed['feedUrl'], feed['resolution'], feed['bandwidth'], feed['codecs'])  # @UnusedVariable
 
-def insertFeedsTest(db):
+def insertFeedsTest():
     import pickle
     
     with open('debugFeeds.list', 'r') as f:
         debugFeeds = pickle.load(f)
-        insertFeeds(db, debugFeeds)
+        insertFeeds(debugFeeds)
     
-def parseFeed(db, stationName, m3u8URL):
+def parseFeed(stationName, m3u8URL):
     feeds = []
     try:
         m3u8 = getFeedM3U8(m3u8URL)
@@ -198,7 +201,7 @@ def parseFeed(db, stationName, m3u8URL):
         for x in range(0, len(infLines)):
             feed = {}
             feed['feedId'] = REGEX_FEED_ID.search(httpLines[x]).group()
-            feed['stationId'] = _getStationId(db, stationName)
+            feed['stationId'] = _getStationId(stationName)
             feed['feedName'] = REGEX_FEED_NAME.search(httpLines[x]).group()
             feed['feedUrl'] = httpLines[x]
             feed['resolution'] = REGEX_INF_RESOLUTION.search(infLines[x]).group()
@@ -210,20 +213,20 @@ def parseFeed(db, stationName, m3u8URL):
     except:
         return None
     
-def parseFeedTest(db, stations):
+def parseFeedTest(stations):
     matches = (x for x in stations if x['stationName'] == 'WREG')
     match = None
     for x in matches:
         match = x
         
-    feeds = parseFeed(db, match['stationName'], match['m3u8URL'])
+    feeds = parseFeed(match['stationName'], match['m3u8URL'])
     return feeds
 
-def parseFeeds(db, stations):
+def parseFeeds(stations):
     feeds = []
     stationIndex = 1
     for station in stations:
-        feed = parseFeed(db, station['stationName'], station['m3u8URL'])
+        feed = parseFeed(station['stationName'], station['m3u8URL'])
         if feed != None: 
             feeds += feed
 #         else:
@@ -233,7 +236,7 @@ def parseFeeds(db, stations):
         stationIndex += 1
     return feeds
 
-def _getStationId(db, stationName):
+def _getStationId(stationName):
     ''' Returns the primary key for a given station name. '''
     if db:
         return db.execute('SELECT STATION_ID FROM stations WHERE STATION_NAME=?', (stationName,)).fetchone()[0]
@@ -241,14 +244,15 @@ def _getStationId(db, stationName):
         return None
 
 def main():
+    global db
     db = connectDB('feeds.sqlite')
     stationLines = getStationLines(STREAMS_URL)
     stations = parseStationLines(stationLines)
-    insertStations(db, stations)
-    feeds = parseFeeds(db, stations)
-    insertFeeds(db, feeds)
+    insertStations(stations)
+    feeds = parseFeeds(stations)
+    insertFeeds(feeds)
 #     insertFeedsTest(db)
-    deleteUnusedStations(db)
+    deleteUnusedStations()
     db.close()
     
 main()
