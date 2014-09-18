@@ -110,11 +110,11 @@ def insertStations(stations):
         success = insertStation(station['stationName'])  # @UnusedVariable
 #         print station['stationName'] + ' successful? ' + str(success)
     
-def insertStation(stationName, stationState='', stationCity=''):
-    ''' taking care of this as to insure a pattern of best practices '''
+def insertStation(stationName, stationState='Unsorted', stationCity='Unsorted'):
+    ''' taking care of this as tmport Plugin o insure a pattern of best practices '''
     if db:
         try:
-            db.execute("insert into stations (STATION_NAME, STATION_STATE, STATION_CITY) values (?, ?, ?)", (stationName, stationState, stationCity))
+            db.execute("insert into stations (STATION_NAME, CITY_ID) values (?, ?)", (stationName, _getCityId(stationCity, stationState)))
             db.commit()
             return True
         except Exception,e:
@@ -242,7 +242,23 @@ def _getStationId(stationName):
         return db.execute('SELECT STATION_ID FROM stations WHERE STATION_NAME=?', (stationName,)).fetchone()[0]
     else:
         return None
-
+    
+def _getCityId(cityName, cityState):
+    try:
+        return db.execute('SELECT CITY_ID FROM cities WHERE CITY_NAME=? AND CITY_STATE=?', (cityName, cityState)).fetchone()[0]
+    except Exception:
+        print("inserting new city: %s, %s" % (cityName, cityState))
+        insertCity(cityName, cityState)
+        return _getCityId(cityName, cityState)
+    
+def insertCity(cityName, cityState):
+    try:
+        db.execute('INSERT INTO cities (CITY_NAME, CITY_STATE_ values (?, ?)', (cityName, cityState))
+        return True
+    except Exception, e:
+        print(e)
+        return False
+    
 def main():
     global db
     db = connectDB('feeds.sqlite')
