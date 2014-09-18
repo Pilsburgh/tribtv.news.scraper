@@ -32,3 +32,6 @@ CREATE TABLE "feeds" (
 CREATE UNIQUE INDEX "FEED_PK" on feeds (FEED_PK ASC);
 CREATE INDEX "FEED_ID" on feeds (FEED_ID ASC);
 CREATE UNIQUE INDEX "FEED_URL" on feeds (FEED_URL ASC);
+
+/* Default city for unsorted stations */
+INSERT INTO cities (CITY_NAME, CITY_STATE) values ("Unsorted", "Unsorted");
