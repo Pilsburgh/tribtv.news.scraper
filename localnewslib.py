@@ -18,8 +18,10 @@ class LocalNewsDB:
     def insertCity(self, cityName, cityState):
         try:
             self.db.execute('INSERT INTO cities (CITY_NAME, CITY_STATE_ values (?, ?)', (cityName, cityState))
+            self.db.commit()
             return True
         except Exception, e:
+            self.db.rollback()
             print(e)
             return False
         
